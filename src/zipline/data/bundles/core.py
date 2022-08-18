@@ -2,6 +2,7 @@ from collections import namedtuple
 import errno
 import os
 import shutil
+from typing import Dict, Optional
 import warnings
 
 import click
@@ -226,7 +227,7 @@ def _make_bundle_core():
     # Expose _bundles through a proxy so that users cannot mutate this
     # accidentally. Users may go through `register` to update this which will
     # warn when trampling another bundle.
-    bundles = mappingproxy(_bundles)
+    bundles: Dict[str, RegisteredBundle] = mappingproxy(_bundles)
 
     @curry
     def register(
@@ -345,9 +346,9 @@ def _make_bundle_core():
             raise UnknownBundle(name)
 
     def ingest(
-        name,
+        name: str,
         environ=os.environ,
-        timestamp=None,
+        timestamp: Optional[pd.Timestamp] = None,
         assets_versions=(),
         show_progress=False,
     ):
@@ -374,8 +375,8 @@ def _make_bundle_core():
 
         calendar = get_calendar(bundle.calendar_name)
 
-        start_session = bundle.start_session
-        end_session = bundle.end_session
+        start_session: pd.Timestamp = bundle.start_session
+        end_session: pd.Timestamp = bundle.end_session
 
         if start_session is None or start_session < calendar.first_session:
             start_session = calendar.first_session
@@ -387,10 +388,11 @@ def _make_bundle_core():
             timestamp = pd.Timestamp.utcnow()
         timestamp = timestamp.tz_convert("utc").tz_localize(None)
 
-        timestr = to_bundle_ingest_dirname(timestamp)
+        timestr: str = to_bundle_ingest_dirname(timestamp)
         cachepath = cache_path(name, environ=environ)
         pth.ensure_directory(pth.data_path([name, timestr], environ=environ))
         pth.ensure_directory(cachepath)
+
         with dataframe_cache(
             cachepath, clean_on_failure=False
         ) as cache, ExitStack() as stack:
@@ -401,6 +403,8 @@ def _make_bundle_core():
                     working_dir(pth.data_path([], environ=environ))
                 )
                 daily_bars_path = wd.ensure_dir(*daily_equity_relative(name, timestr))
+
+                # BColz is a binary compression algorithm
                 daily_bar_writer = BcolzDailyBarWriter(
                     daily_bars_path,
                     calendar,

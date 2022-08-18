@@ -7,7 +7,7 @@ Otherwise default to expanduser(~/.zipline)
 from errno import EEXIST
 import os
 from os.path import exists, expanduser, join
-
+from zipline.config import settings
 import pandas as pd
 
 
@@ -124,7 +124,7 @@ def zipline_root(environ=None):
     if environ is None:
         environ = os.environ
 
-    root = environ.get("ZIPLINE_ROOT", None)
+    root = settings.ZIPLINE_ROOT
     if root is None:
         root = expanduser("~/.zipline")
 
